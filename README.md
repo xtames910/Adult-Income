@@ -1,32 +1,32 @@
-# Adult Income — Predicting Income & Auditing Algorithmic Bias
+# Adult Income: Predicting Income & Auditing Algorithmic Bias
 
 A notebook that predicts whether someone earns **more than $50K/year** using the UCI **Adult
-Income** census dataset (~32.5K rows). Past the usual "train a model, report accuracy" part, this
-one spends most of its effort on **fairness**: measuring and reducing algorithmic bias across two
-sensitive attributes — `sex` and `race` — including what happens when they **intersect** — using
+Income** census dataset (about 32.5K rows). Past the usual "train a model, report accuracy" part,
+this one spends most of its effort on **fairness**: measuring and reducing algorithmic bias across
+two sensitive attributes, `sex` and `race`, including what happens when they **intersect**, using
 [`fairlearn`](https://fairlearn.org/), plus `SHAP` to figure out which features are quietly acting
 as proxies for those attributes.
 
 ## Stack
 
-`pandas` · `numpy` · `scikit-learn` (Pipeline, ColumnTransformer, RandomizedSearchCV) ·
-`fairlearn` (MetricFrame, ExponentiatedGradient) · `shap` · `matplotlib`
+`pandas`, `numpy`, `scikit-learn` (Pipeline, ColumnTransformer, RandomizedSearchCV), `fairlearn`
+(MetricFrame, ExponentiatedGradient), `shap`, `matplotlib`
 
 ## What the pipeline does
 
-1. **Cleaning** — swap `"?"` for `NaN`, drop rows with missing values (loses about 7.4% of rows,
+1. **Cleaning.** Swap `"?"` for `NaN` and drop rows with missing values (loses about 7.4% of rows,
    30,162 left).
-2. **Preprocessing** — `ColumnTransformer` + `OneHotEncoder` inside a `Pipeline`, fit only on the
-   training set so nothing from the test set leaks in (a `LabelEncoder` fit on the whole dataset
-   before splitting is a common mistake here — this avoids it).
-3. **Tuning** — `RandomizedSearchCV` with 3-fold stratified CV, optimizing AUC, on a
+2. **Preprocessing.** `ColumnTransformer` + `OneHotEncoder` inside a `Pipeline`, fit only on the
+   training set so nothing from the test set leaks in. (A `LabelEncoder` fit on the whole dataset
+   before splitting is a common mistake here; this avoids it.)
+3. **Tuning.** `RandomizedSearchCV` with 3 fold stratified CV, optimizing AUC, on a
    `RandomForestClassifier`.
-4. **Fairness measurement** — `MetricFrame` gives selection rate, TPR, and FPR per group; then
+4. **Fairness measurement.** `MetricFrame` gives selection rate, TPR, and FPR per group, then
    Demographic Parity difference and Equalized Odds difference, computed for `sex`, `race`, and the
    `sex × race` intersection.
-5. **Bias mitigation** — `ExponentiatedGradient` with a `DemographicParity` constraint on `sex`.
-6. **SHAP** — rank feature importance, then check which top features are also unevenly distributed
-   across sex/race — those are the suspicious "proxy" features.
+5. **Bias mitigation.** `ExponentiatedGradient` with a `DemographicParity` constraint on `sex`.
+6. **SHAP.** Rank feature importance, then check which top features are also unevenly distributed
+   across sex and race; those are the suspicious "proxy" features.
 
 ## Results
 
@@ -38,23 +38,23 @@ as proxies for those attributes.
 | After mitigation (ExponentiatedGradient, DP on sex) | 0.8452 | **0.0039** | 0.2974 | 0.1059 | 0.5714 | 0.1968 | 1.0000 |
 
 **What stood out:**
-- Constraining mitigation on `sex` basically wipes out the Demographic Parity gap there (0.154 →
-  0.004), at a cost of about 2.2 accuracy points — a pretty reasonable trade.
-- But Equalized Odds for `sex` got *worse* (0.048 → 0.297) — optimizing for one fairness definition
-  doesn't mean the other one improves too. They can pull in different directions.
-- Since the mitigation only targets `sex`, `race` — and especially the `sex × race` intersection —
-  barely budges. EO diff for the intersection stays pinned at 1.0 before and after, which is a good
+- Constraining mitigation on `sex` basically wipes out the Demographic Parity gap there (0.154 to
+  0.004), at a cost of about 2.2 accuracy points. That's a pretty reasonable trade.
+- Equalized Odds for `sex` actually got worse (0.048 to 0.297). Optimizing for one fairness
+  definition doesn't mean the other one improves too. They can pull in different directions.
+- Since the mitigation only targets `sex`, `race` and especially the `sex × race` intersection
+  barely budge. EO diff for the intersection stays pinned at 1.0 both before and after, a good
   reminder that fixing fairness for one attribute at a time doesn't guarantee anything at the
   intersectional level.
 
-**SHAP — top features:** `marital.status_Married-civ-spouse`, `education.num`, `capital.gain`,
+**SHAP, top features:** `marital.status_Married-civ-spouse`, `education.num`, `capital.gain`,
 `age`, `relationship_Husband`, `hours.per.week`, `marital.status_Never-married`,
-`occupation_Exec-managerial`, `occupation_Prof-specialty`, `capital.loss`. Two of these —
-`marital.status` and `relationship` (especially the `Husband` category) — are both highly important
-to the model *and* heavily skewed by `sex`, making them the most likely proxy features for gender.
+`occupation_Exec-managerial`, `occupation_Prof-specialty`, `capital.loss`. Two of these,
+`marital.status` and `relationship` (especially the `Husband` category), are both highly important
+to the model and heavily skewed by `sex`, making them the most likely proxy features for gender.
 
-*(`fairness_before_after.png` and `shap_top_features.png`, generated by the notebook, visualize the
-two sections above.)*
+(`fairness_before_after.png` and `shap_top_features.png`, generated by the notebook, visualize the
+two sections above.)
 
 ## Repo layout
 
@@ -77,4 +77,4 @@ set, just to keep runtime reasonable.
 
 ## Data source
 
-[Adult Income Dataset — UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/2/adult)
+[Adult Income Dataset, UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/2/adult)
